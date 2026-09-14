@@ -1,0 +1,12 @@
+# Requirements for building the g2pW ONNX->MNN model + aux data pack.
+#
+# No PyTorch needed here: the source is already an official pretrained
+# ONNX release (unlike the LTP conversion flow), so this is a pure
+# ONNX->MNN conversion, same as the PaddleOCR ONNX-direct flow.
+
+huggingface_hub==1.8.0
+mnn==3.5.0
+
+onnx==1.17.0
+numpy==2.0.2
+protobuf==6.33.6
