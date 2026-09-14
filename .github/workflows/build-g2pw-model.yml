@@ -1,0 +1,89 @@
+name: Build g2pW Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to create or update"
+        required: true
+        default: "g2pw-model-v1"
+
+      release_title:
+        description: "Release title"
+        required: true
+        default: "g2pW MNN model + data pack"
+
+      weight_quant_bits:
+        description: "MNNConvert --weightQuantBits (0 disables, default -- model is already small)"
+        required: false
+        default: "0"
+
+      draft:
+        description: "Create as draft release"
+        type: boolean
+        required: false
+        default: false
+
+      prerelease:
+        description: "Mark as prerelease"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: scripts/python/requirements_g2pw.txt
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r scripts/python/requirements_g2pw.txt
+
+      - name: Build g2pW model
+        run: |
+          set -euo pipefail
+
+          python scripts/python/build_g2pw_model.py \
+            --out-dir build/g2pw-model \
+            --zip build/g2pw-model.zip \
+            --weight-quant-bits "${{ inputs.weight_quant_bits }}"
+
+      - name: Show build output
+        run: |
+          echo "build/"
+          ls -lh build || true
+
+          echo "build/g2pw-model/"
+          ls -lh build/g2pw-model || true
+
+          echo "zip sha256"
+          sha256sum build/g2pw-model.zip || true
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: ${{ inputs.release_title }}
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            build/g2pw-model.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
